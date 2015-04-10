@@ -244,6 +244,7 @@ int btrfs_tree_search2_ioctl_supported(int fd);
 int btrfs_check_nodesize(u32 nodesize, u32 sectorsize);
 
 const char *get_argv0_buf(void);
+int is_numerical(const char *str);
 
 #define HELPINFO_OUTPUT_UNIT							\
 	"--raw              raw numbers in bytes",				\
