@@ -74,7 +74,7 @@ do not perform discard by default
 -f|--force::::
 force overwrite of existing filesystem on the given disk(s)
 
-*remove* <dev> [<dev>...] <path>::
+*remove* <dev>|<devid> [<dev>|<devid>...] <path>::
 Remove device(s) from a filesystem identified by <path>.
 
 *delete* <dev> [<dev>...] <path>::
