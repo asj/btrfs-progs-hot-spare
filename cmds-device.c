@@ -169,7 +169,7 @@ static int _cmd_device_remove(int argc, char **argv,
 		if (is_numerical(argv[i])) {
 			argv3.devid = arg_strtou64(argv[i]);
 			its_num = true;
-		} else if (is_block_device(argv[i])) {
+		} else if (is_block_device(argv[i]) == 1) {
 			strncpy_null(argv3.name, argv[i]);
 		} else {
 			fprintf(stderr,
@@ -289,7 +289,7 @@ static int cmd_device_scan(int argc, char **argv)
 	for( i = devstart ; i < argc ; i++ ){
 		char *path;
 
-		if (!is_block_device(argv[i])) {
+		if (is_block_device(argv[i]) != 1) {
 			fprintf(stderr,
 				"ERROR: %s is not a block device\n", argv[i]);
 			ret = 1;
@@ -348,7 +348,7 @@ static int cmd_device_ready(int argc, char **argv)
 		goto out;
 	}
 
-	if (!is_block_device(path)) {
+	if (is_block_device(path) != 1) {
 		fprintf(stderr,
 			"ERROR: %s is not a block device\n", path);
 		ret = 1;
