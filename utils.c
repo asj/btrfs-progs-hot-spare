@@ -1741,7 +1741,7 @@ static int set_label_mounted(const char *mount_path, const char *label)
 	return 0;
 }
 
-static int get_label_unmounted(const char *dev, char *label)
+int get_label_unmounted(const char *dev, char *label)
 {
 	struct btrfs_root *root;
 	int ret;
@@ -1750,11 +1750,6 @@ static int get_label_unmounted(const char *dev, char *label)
 	if (ret < 0) {
 	       fprintf(stderr, "FATAL: error checking %s mount status\n", dev);
 	       return -1;
-	}
-	if (ret > 0) {
-		fprintf(stderr, "ERROR: dev %s is mounted, use mount point\n",
-			dev);
-		return -1;
 	}
 
 	/* Open the super_block at the default location
@@ -1780,6 +1775,7 @@ int get_label_mounted(const char *mount_path, char *labelp)
 {
 	char label[BTRFS_LABEL_SIZE];
 	int fd;
+	int ret;
 
 	fd = open(mount_path, O_RDONLY | O_NOATIME);
 	if (fd < 0) {
@@ -1788,10 +1784,14 @@ int get_label_mounted(const char *mount_path, char *labelp)
 	}
 
 	memset(label, '\0', sizeof(label));
-	if (ioctl(fd, BTRFS_IOC_GET_FSLABEL, label) < 0) {
-		fprintf(stderr, "ERROR: unable get label %s\n", strerror(errno));
+	ret = ioctl(fd, BTRFS_IOC_GET_FSLABEL, label);
+	if (ret < 0) {
+		if (errno != ENOTTY) {
+			fprintf(stderr, "ERROR: unable get label %s\n", strerror(errno));
+		}
+		ret = -errno;
 		close(fd);
-		return -1;
+		return ret;
 	}
 
 	strncpy(labelp, label, sizeof(label));
