@@ -3070,3 +3070,54 @@ unsigned int get_unit_mode_from_arg(int *argc, char *argv[], int df_mode)
 
 	return unit_mode;
 }
+
+void btrfs_add_spare(char *dev)
+{
+	struct stat st;
+	int fd;
+	int i;
+	int ret;
+	u64 block_cnt;
+	u64 blocks[7];
+	u32 nodesz = max_t(u32, sysconf(_SC_PAGESIZE), BTRFS_MKFS_DEFAULT_NODE_SIZE);
+	struct btrfs_mkfs_config mkfs_cfg;
+
+	fd = open(dev, O_RDWR);
+	if (fd < 0) {
+		fprintf(stderr, "unable to open %s: %s\n", dev, strerror(errno));
+		return;
+	}
+
+	if (fstat(fd, &st)) {
+		fprintf(stderr, "unable to stat %s\n", dev);
+		goto out;
+	}
+	block_cnt = btrfs_device_size(fd, &st);
+        if (!block_cnt) {
+                fprintf(stderr, "unable to find %s size\n", dev);
+		goto out;
+        }
+
+	if (block_cnt < BTRFS_MKFS_SYSTEM_GROUP_SIZE) {
+		fprintf(stderr, "device is too small to make filesystem\n");
+		goto out;
+	}
+
+	blocks[0] = BTRFS_SUPER_INFO_OFFSET;
+	for (i = 1; i < 7; i++)
+		blocks[i] = BTRFS_SUPER_INFO_OFFSET + 1024 * 1024 + nodesz * i;
+
+	memset(&mkfs_cfg, 0, sizeof(mkfs_cfg));
+	memcpy(mkfs_cfg.blocks, blocks, sizeof(blocks));
+	mkfs_cfg.num_bytes = block_cnt;
+	mkfs_cfg.nodesize = nodesz;
+	mkfs_cfg.sectorsize = 4096;
+	mkfs_cfg.stripesize = 4096;
+	mkfs_cfg.features = BTRFS_FEATURE_INCOMPAT_SPARE_DEV;
+	ret = make_btrfs(fd, &mkfs_cfg);
+	if (ret)
+		fprintf(stderr, "error during mkfs: %s\n", strerror(-ret));
+
+out:
+	close(fd);
+}

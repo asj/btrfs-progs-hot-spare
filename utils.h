@@ -270,5 +270,6 @@ int is_numerical(const char *str);
 	"-t|--tbytes        show sizes in TiB, or TB with --si"
 
 unsigned int get_unit_mode_from_arg(int *argc, char *argv[], int df_mode);
+void btrfs_add_spare(char *dev);
 
 #endif

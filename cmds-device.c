@@ -43,27 +43,30 @@ static const char * const cmd_device_add_usage[] = {
 	"Add a device to a filesystem",
 	"-K|--nodiscard    do not perform whole device TRIM",
 	"-f|--force        force overwrite existing filesystem on the disk",
+	"-s|--spare        creates and adds global spare device",
 	NULL
 };
 
 static int cmd_device_add(int argc, char **argv)
 {
 	char	*mntpnt;
-	int	i, fdmnt, ret=0, e;
+	int	i, fdmnt = 0, ret=0, e;
 	DIR	*dirstream = NULL;
 	int	discard = 1;
 	int	force = 0;
 	int	last_dev;
+	int	spare = 0;
 
 	while (1) {
 		int c;
 		static const struct option long_options[] = {
 			{ "nodiscard", optional_argument, NULL, 'K'},
 			{ "force", no_argument, NULL, 'f'},
+			{ "spare", no_argument, NULL, 's'},
 			{ NULL, 0, NULL, 0}
 		};
 
-		c = getopt_long(argc, argv, "Kf", long_options, NULL);
+		c = getopt_long(argc, argv, "Kfs", long_options, NULL);
 		if (c < 0)
 			break;
 		switch (c) {
@@ -73,20 +76,30 @@ static int cmd_device_add(int argc, char **argv)
 		case 'f':
 			force = 1;
 			break;
+		case 's':
+			spare = 1;
+			break;
 		default:
 			usage(cmd_device_add_usage);
 		}
 	}
 
-	if (check_argc_min(argc - optind, 2))
-		usage(cmd_device_add_usage);
+	if (!spare) {
+		if (check_argc_min(argc - optind, 2))
+			usage(cmd_device_add_usage);
 
-	last_dev = argc - 1;
-	mntpnt = argv[last_dev];
+		last_dev = argc - 1;
+		mntpnt = argv[last_dev];
 
-	fdmnt = btrfs_open_dir(mntpnt, &dirstream, 1);
-	if (fdmnt < 0)
-		return 1;
+		fdmnt = btrfs_open_dir(mntpnt, &dirstream, 1);
+		if (fdmnt < 0)
+			return 1;
+	} else {
+		if (check_argc_min(argc - optind, 1))
+			usage(cmd_device_add_usage);
+
+		last_dev = argc;
+	}
 
 	for (i = optind; i < last_dev; i++){
 		struct btrfs_ioctl_vol_args ioctl_args;
@@ -125,6 +138,10 @@ static int cmd_device_add(int argc, char **argv)
 			goto error_out;
 		}
 
+		if (spare) {
+			btrfs_add_spare(path);
+			continue;
+		}
 		memset(&ioctl_args, 0, sizeof(ioctl_args));
 		strncpy_null(ioctl_args.name, path);
 		res = ioctl(fdmnt, BTRFS_IOC_ADD_DEV, &ioctl_args);
